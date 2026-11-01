@@ -1,6 +1,13 @@
+import '@fontsource/cinzel/400.css';
+import '@fontsource/cinzel/700.css';
+import '@fontsource/cinzel/800.css';
+import '@fontsource/spectral/400.css';
+import '@fontsource/spectral/400-italic.css';
+import '@fontsource/spectral/500.css';
 import './style.css';
 import { CONFIG, TIERS, multiplierFor, tierIndexFor } from './config.js';
 import { createScene } from './scene.js';
+import { makeCard, shareText } from './card.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -39,21 +46,24 @@ $$('[data-buy]').forEach((a) => {
 // ---------- Contract address ----------
 const caValue = $('[data-ca-value]');
 const caCopy = $('[data-ca-copy]');
+const caNote = $('[data-ca-note]');
 if (CONFIG.mint) {
-  caValue.textContent = CONFIG.mint;
+  caValue.textContent = `${CONFIG.mint.slice(0, 6)}…${CONFIG.mint.slice(-6)}`;
+  caValue.title = CONFIG.mint;
   caCopy.hidden = false;
   caCopy.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(CONFIG.mint);
       caCopy.textContent = 'Copied';
-      setTimeout(() => (caCopy.textContent = 'Copy'), 1600);
+      setTimeout(() => (caCopy.textContent = 'Copy address'), 1600);
     } catch {
+      caValue.textContent = CONFIG.mint;
       caCopy.textContent = 'Select and copy';
     }
   });
 } else {
-  caValue.textContent = 'Posted here and on X at launch';
-  caValue.style.color = 'var(--mist)';
+  caValue.textContent = 'At launch';
+  caNote.textContent = 'posted here and on X';
 }
 
 // ---------- Growth simulator ----------
@@ -61,7 +71,7 @@ const range = $('[data-sim-range]');
 const track = $('[data-tier-track]');
 TIERS.forEach((t, i) => {
   const li = document.createElement('li');
-    li.innerHTML = `<button type="button" aria-pressed="false">${t.name}<small>${t.day === 0 ? 'Day 0' : `Day ${t.day}`}</small></button>`;
+    li.innerHTML = `<button type="button" aria-pressed="false" style="--g:${t.color}"><span class="tgem" style="background:${t.color};color:${t.color}" aria-hidden="true"></span>${t.name}<small>Day ${t.day}</small></button>`;
   li.querySelector('button').addEventListener('click', () => { range.value = t.day; updateSim(true); });
   track.appendChild(li);
 });
@@ -187,8 +197,59 @@ $('[data-lookup]').addEventListener('submit', async (e) => {
         <div><dt>Multiplier</dt><dd>${Number(a.multiplier).toFixed(2)}×</dd></div>
         <div><dt>Days held</dt><dd>${Number(a.days).toFixed(1)}</dd></div>
         <div><dt>Est. next harvest</dt><dd>${fmtUsd(a.estHarvestUsd)}</dd></div>
-      </dl>`;
+      </dl>
+      <button class="btn btn-ghost card-btn" type="button" data-card-wallet>Make my aura card</button>`;
+    $('[data-card-wallet]', out).addEventListener('click', () =>
+      openCard({ tierIndex: ti, multiplier: Number(a.multiplier), days: Number(a.days), aura: a.aura, wallet }));
   } catch {
     out.innerHTML = '<p class="err">Couldn’t read this wallet right now. Try again in a minute.</p>';
   }
 });
+
+// ---------- Aura cards ----------
+const dialog = $('[data-card-dialog]');
+let cardFile = null;
+let cardUrl = null;
+
+async function openCard(data) {
+  const btns = $$('[data-card-sim], [data-card-wallet]');
+  btns.forEach((b) => (b.disabled = true));
+  try {
+    const canvas = await makeCard(scene, data);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+    if (cardUrl) URL.revokeObjectURL(cardUrl);
+    cardUrl = URL.createObjectURL(blob);
+    cardFile = new File([blob], `aura-${TIERS[data.tierIndex].name.toLowerCase()}.png`, { type: 'image/png' });
+
+    $('[data-card-img]').src = cardUrl;
+    $('[data-card-img]').alt = `Aura card: ${TIERS[data.tierIndex].name} tier, ${data.multiplier.toFixed(2)}× multiplier`;
+    const save = $('[data-card-save]');
+    save.href = cardUrl;
+    save.download = cardFile.name;
+
+    const text = shareText(data);
+    $('[data-card-x]').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(CONFIG.siteUrl)}`;
+    const shareBtn = $('[data-card-share]');
+    const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [cardFile] }));
+    shareBtn.hidden = !canShareFile;
+    $('[data-card-hint]').textContent = canShareFile
+      ? 'Share sends the image straight to X, Telegram or anywhere else on your phone.'
+      : 'X can’t attach images from a link, so save the image first, then add it to your post.';
+    shareBtn.onclick = async () => {
+      try { await navigator.share({ files: [cardFile], text: `${text} ${CONFIG.siteUrl}` }); } catch { /* cancelled */ }
+    };
+    dialog.showModal();
+  } finally {
+    btns.forEach((b) => (b.disabled = false));
+  }
+}
+
+$('[data-card-sim]').addEventListener('click', () => {
+  const days = Number(range.value);
+  openCard({ tierIndex: tierIndexFor(days), multiplier: multiplierFor(days), days });
+});
+$('[data-card-close]').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+
+// Used to render the link-preview image
+window.__aura = { makeCard: (d) => makeCard(scene, d) };

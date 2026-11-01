@@ -5,6 +5,8 @@ export const CONFIG = {
   // Coin page on the Veilbound launchpad (set after launch).
   buyUrl: '',
   launchLabel: 'Launching Nov 2',
+  siteHost: 'auraveil.xyz',
+  siteUrl: 'https://auraveil.xyz',
   xUrl: 'https://x.com/AuraVeil',
   telegramUrl: 'https://t.me/AuraVeilCommunity',
   harvestShare: 0.25, // share of the bankroll paid each daily harvest
@@ -23,7 +25,7 @@ export const TIERS = [
   { name: 'Ember',    day: 2,  color: '#FF6A2B', blurb: 'Two days in. The glow takes hold.' },
   { name: 'Flame',    day: 7,  color: '#FF3D7F', blurb: 'One week. Your farming rate has doubled.' },
   { name: 'Radiant',  day: 14, color: '#9B5CFF', blurb: 'Two weeks. The Veil starts to notice you.' },
-  { name: 'Ascended', day: 30, color: '#FFF1C9', blurb: 'Thirty days. Full 3× farming, for as long as you hold.' },
+  { name: 'Ascended', day: 30, color: '#FFE09A', blurb: 'Thirty days. Full 3× farming, for as long as you hold.' },
 ];
 
 export function tierIndexFor(days) {

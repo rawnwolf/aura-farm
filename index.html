@@ -5,21 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>$AURA · Hold to farm aura</title>
   <meta name="description" content="Hold $AURA to farm aura. The longer you hold, the faster it grows. Every day the harvest pays holders by aura, straight to their wallets. Paired with $VEIL." />
-  <meta name="theme-color" content="#07060D" />
+  <meta name="theme-color" content="#05070A" />
   <meta property="og:title" content="$AURA · Hold to farm aura" />
   <meta property="og:description" content="Every hour you hold, your aura grows. Every day, the harvest pays holders. Sell and your aura shatters." />
+  <meta property="og:image" content="https://auraveil.xyz/og.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="675" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://auraveil.xyz/og.jpg" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet" />
 </head>
 <body>
   <canvas id="aura" aria-hidden="true"></canvas>
-  <div class="vignette" aria-hidden="true"></div>
+  <div class="shade" aria-hidden="true"></div>
 
   <header class="top">
-    <a class="mark" href="#top" aria-label="$AURA home">$AURA</a>
+    <a class="brand" href="#top" aria-label="$AURA home">
+      <img src="/favicon.svg" alt="" width="34" height="34" />
+      <span class="brand-name">$AURA</span>
+      <span class="brand-sub">Aura farming</span>
+    </a>
     <nav aria-label="Sections">
       <a href="#farming">How it works</a>
       <a href="#grow">Tiers</a>
@@ -33,57 +38,77 @@
       <a class="icon-link" data-tg href="#" aria-label="$AURA Telegram" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 4.3 18.3 19c-.2 1-.8 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.7 8.6-7.8c.4-.3-.1-.5-.6-.2L6.6 12.9 2 11.5c-1-.3-1-1 .2-1.5l18-6.9c.8-.3 1.6.2 1.2 1.2Z"/></svg>
       </a>
-      <a class="btn btn-small" data-buy href="#">Buy $AURA</a>
+      <a class="btn btn-gold btn-small" data-buy href="#">Buy $AURA</a>
     </div>
   </header>
 
   <main id="top">
     <section class="hero">
       <div class="hero-copy">
-        <h1>Hold.<br />Farm.<br />Ascend.</h1>
+        <p class="kicker"><span class="gem" aria-hidden="true"></span>Paired with $VEIL on Veilbound</p>
+        <h1><span>Hold.</span> <span>Farm.</span> <span class="h1-gold">Ascend.</span></h1>
         <p class="lede">$AURA pays the people who stay. Every hour you hold, your aura grows. Every day, the harvest pays holders by aura, straight to their wallets.</p>
         <div class="hero-actions">
-          <a class="btn" href="#yours">Check your aura</a>
-          <a class="btn btn-ghost" data-tg href="#" target="_blank" rel="noopener">Join the Telegram</a>
-        </div>
-        <div class="ca" data-ca>
-          <span class="ca-label">Contract</span>
-          <code class="ca-value" data-ca-value></code>
-          <button class="ca-copy" type="button" data-ca-copy hidden>Copy</button>
+          <a class="btn btn-gold" href="#yours">Check your aura</a>
+          <a class="btn btn-dark" data-tg href="#" target="_blank" rel="noopener">Join the Telegram</a>
         </div>
       </div>
-      <p class="scroll-hint" aria-hidden="true">Scroll</p>
+
+      <dl class="strip frame">
+        <div>
+          <dt>Multiplier</dt>
+          <dd>Up to 3×</dd>
+          <p>for holding 30 days</p>
+        </div>
+        <div>
+          <dt>Harvest</dt>
+          <dd>Every day</dd>
+          <p>about 25% of the bankroll</p>
+        </div>
+        <div>
+          <dt>Claiming</dt>
+          <dd>None</dd>
+          <p>payouts land in your wallet</p>
+        </div>
+        <div class="strip-ca" data-ca>
+          <dt>Contract</dt>
+          <dd><code data-ca-value></code></dd>
+          <p><button class="ca-copy" type="button" data-ca-copy hidden>Copy address</button><span data-ca-note></span></p>
+        </div>
+      </dl>
     </section>
 
     <section class="panel farming" id="farming" aria-labelledby="farming-h">
-      <h2 id="farming-h">Staking, without the lock.</h2>
+      <h2 id="farming-h">Staking, without the lock</h2>
       <p class="sub">Nothing to stake into, nothing to claim. You hold, and the farm pays you.</p>
-      <ol class="rules">
-        <li>
+      <ul class="rules">
+        <li class="frame">
+          <svg class="rule-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/><path d="M19 38h10l-5-5z" class="fill"/></svg>
           <h3>Hold to farm</h3>
           <p>Every hour you hold $AURA, you earn aura: your coins times your multiplier.</p>
         </li>
-        <li>
+        <li class="frame">
+          <svg class="rule-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 40 24 28l14 12M10 28 24 16l14 12M10 16 24 4l14 12"/></svg>
           <h3>Time beats size</h3>
           <p>Your multiplier starts at 1×, reaches 2× at day 7 and 3× at day 30. Long holders out-farm whales who just arrived.</p>
         </li>
-        <li>
+        <li class="frame">
+          <svg class="rule-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="30" r="12"/><circle cx="24" cy="30" r="6"/><path d="M24 4v10M14 8l4 7M34 8l-4 7"/></svg>
           <h3>Harvest every day</h3>
           <p>Once a day, about a quarter of the bankroll is paid to holders by their share of total aura. It lands in your wallet. No claiming.</p>
         </li>
-        <li class="rule-warn">
+        <li class="frame rule-warn">
+          <svg class="rule-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 38 20 24 44 10 20Z"/><path d="M10 20h28M22 4l-3 16 5 8-2 16M30 20l-4 9"/></svg>
           <h3>Selling shatters your aura</h3>
           <p>Any sell or transfer out resets your aura and multiplier to zero. Buying more never resets you.</p>
         </li>
-      </ol>
+      </ul>
     </section>
 
     <section class="panel grow" id="grow" aria-labelledby="grow-h">
-      <div class="grow-copy">
-        <h2 id="grow-h">Watch your aura grow.</h2>
-        <p class="sub">Drag to see how your aura changes the longer you hold.</p>
-      </div>
-      <div class="sim">
+      <h2 id="grow-h">Watch your aura grow</h2>
+      <p class="sub">Drag to see how your aura changes the longer you hold. The portal changes with it.</p>
+      <div class="sim frame">
         <div class="sim-readout" aria-live="polite">
           <p class="sim-tier" data-sim-tier>Spark</p>
           <p class="sim-blurb" data-sim-blurb></p>
@@ -97,6 +122,7 @@
           <input type="range" min="0" max="30" step="0.25" value="0" data-sim-range />
         </label>
         <ol class="tier-track" data-tier-track aria-label="Tiers"></ol>
+        <button class="btn btn-dark card-btn" type="button" data-card-sim>Make an aura card</button>
       </div>
     </section>
 
@@ -106,40 +132,47 @@
       <form class="lookup" data-lookup>
         <label for="wallet" class="visually-hidden">Wallet address</label>
         <input id="wallet" name="wallet" autocomplete="off" spellcheck="false" placeholder="Solana wallet address" />
-        <button class="btn" type="submit">Check aura</button>
+        <button class="btn btn-gold" type="submit">Check aura</button>
       </form>
       <div class="lookup-result" data-lookup-result aria-live="polite"></div>
     </section>
 
     <section class="panel harvest" id="harvest" aria-labelledby="harvest-h">
       <h2 id="harvest-h">The harvest</h2>
-      <div class="harvest-stats">
-        <div class="stat">
-          <p class="stat-num" data-bankroll>—</p>
-          <p class="stat-label">Bankroll</p>
-        </div>
-        <div class="stat">
-          <p class="stat-num" data-countdown>—</p>
-          <p class="stat-label" data-countdown-label>Next harvest</p>
-        </div>
-        <div class="stat">
-          <p class="stat-num" data-farmers>—</p>
-          <p class="stat-label">Farmers</p>
-        </div>
-      </div>
+      <p class="sub">Every trade fills the bankroll. Every day, the farm pays the people who stayed.</p>
+      <dl class="harvest-stats frame">
+        <div class="stat"><dt>Bankroll</dt><dd data-bankroll>—</dd></div>
+        <div class="stat"><dt data-countdown-label>Next harvest</dt><dd data-countdown>—</dd></div>
+        <div class="stat"><dt>Farmers</dt><dd data-farmers>—</dd></div>
+      </dl>
       <h3 class="board-h">Top farmers</h3>
-      <div class="board" data-board></div>
+      <div class="board frame" data-board></div>
     </section>
   </main>
 
   <footer class="foot">
-    <p class="foot-pair">Paired with $VEIL on Veilbound.</p>
+    <div class="foot-brand">
+      <img src="/favicon.svg" alt="" width="28" height="28" />
+      <span>$AURA</span>
+    </div>
     <p class="foot-note">Harvests pay only what trading fees bring in. Nothing here is a promised return or financial advice.</p>
     <div class="foot-links">
       <a data-x href="#" target="_blank" rel="noopener">X</a>
       <a data-tg href="#" target="_blank" rel="noopener">Telegram</a>
     </div>
   </footer>
+
+  <dialog class="card-dialog frame" data-card-dialog aria-labelledby="card-h">
+    <h2 id="card-h" class="visually-hidden">Your aura card</h2>
+    <img data-card-img alt="" width="1200" height="675" />
+    <div class="card-actions">
+      <button class="btn btn-gold" type="button" data-card-share>Share</button>
+      <a class="btn btn-dark" data-card-x href="#" target="_blank" rel="noopener">Post on X</a>
+      <a class="btn btn-dark" data-card-save download="aura-card.png" href="#">Save image</a>
+      <button class="card-close" type="button" data-card-close aria-label="Close">×</button>
+    </div>
+    <p class="card-hint" data-card-hint></p>
+  </dialog>
 
   <script type="module" src="/src/main.js"></script>
 </body>
