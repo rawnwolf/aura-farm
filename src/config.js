@@ -6,7 +6,7 @@ export const CONFIG = {
   buyUrl: '',
   launchpadUrl: 'https://veilbound-launchpad.fly.dev',
   siteHost: 'auraveil.xyz',
-  siteUrl: 'https://www.auraveil.xyz',
+  siteUrl: 'https://auraveil.xyz',
   xUrl: 'https://x.com/AuraVeil',
   telegramUrl: 'https://t.me/AuraVeilCommunity',
   harvestShare: 0.25, // share of the bankroll paid each daily harvest
