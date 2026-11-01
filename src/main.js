@@ -32,15 +32,11 @@ function applyTier(i, intensityOverride) {
 $$('[data-x]').forEach((a) => (a.href = CONFIG.xUrl));
 $$('[data-tg]').forEach((a) => (a.href = CONFIG.telegramUrl));
 $$('[data-buy]').forEach((a) => {
-  if (CONFIG.buyUrl) {
-    a.href = CONFIG.buyUrl;
-    a.target = '_blank';
-    a.rel = 'noopener';
-  } else {
-    a.textContent = CONFIG.launchLabel;
-    a.setAttribute('aria-disabled', 'true');
-    a.removeAttribute('href');
-  }
+  // Before launch, point to the Veilbound launchpad; after launch, to the coin's page there.
+  a.href = CONFIG.buyUrl || CONFIG.launchpadUrl;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  if (!CONFIG.buyUrl) a.innerHTML = '<span class="lp-long">Veilbound Launchpad</span><span class="lp-short">Launchpad</span>';
 });
 
 // ---------- Contract address ----------

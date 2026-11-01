@@ -4,7 +4,7 @@ export const CONFIG = {
   mint: '',
   // Coin page on the Veilbound launchpad (set after launch).
   buyUrl: '',
-  launchLabel: 'Launching Nov 2',
+  launchpadUrl: 'https://veilbound-launchpad.fly.dev',
   siteHost: 'auraveil.xyz',
   siteUrl: 'https://auraveil.xyz',
   xUrl: 'https://x.com/AuraVeil',

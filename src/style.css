@@ -361,3 +361,6 @@ input[type='range']::-moz-range-thumb {
   .top-actions .icon-link { display: none; }
   .btn-small { font-size: 0.68rem; padding: 0 12px; letter-spacing: 0.08em; }
 }
+
+.lp-short { display: none; }
+@media (max-width: 480px) { .lp-long { display: none; } .lp-short { display: inline; } }
