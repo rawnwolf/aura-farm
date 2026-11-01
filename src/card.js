@@ -1,7 +1,7 @@
 import { CONFIG, TIERS } from './config.js';
 
 const W = 1200, H = 675; // large-image size for X and Telegram (16:9)
-const GOLD_HI = '#f3dc9b', GOLD = '#d9b56a', BONE = '#ece4d2', MIST = '#8d8899', TEAL = '#45d6c8';
+const GOLD_HI = '#f3dc9b', GOLD = '#d9b56a', BONE = '#ece4d2', LABEL = '#cbc3d6', TEAL = '#5fe3d6';
 
 async function fontsReady() {
   try {
@@ -75,13 +75,13 @@ function buildOverlay(data) {
   g.font = '700 34px "Cinzel", serif';
   g.fillText('$AURA', left, 104);
   g.fillStyle = TEAL;
-  g.font = '400 15px "Cinzel", serif';
+  g.font = '700 17px "Cinzel", serif';
   g.letterSpacing = '4px';
   g.fillText('PAIRED WITH $VEIL', left + 136, 101);
 
   // Line above the tier
   g.fillStyle = TEAL;
-  g.font = '400 20px "Cinzel", serif';
+  g.font = '700 21px "Cinzel", serif';
   g.letterSpacing = '5px';
   const who = data.wallet ? `${data.wallet.slice(0, 4)}…${data.wallet.slice(-4)}` : null;
   let leadX = left;
@@ -91,7 +91,7 @@ function buildOverlay(data) {
     g.font = '500 24px "Spectral", serif';
     g.fillText(who, left, 226);
     leadX = left + g.measureText(who).width + 14;
-    g.font = '400 20px "Cinzel", serif';
+    g.font = '700 21px "Cinzel", serif';
     g.letterSpacing = '5px';
   }
   const lead = real ? (who ? 'has reached' : 'My aura has reached') : 'Farming toward';
@@ -120,10 +120,10 @@ function buildOverlay(data) {
     g.font = '700 42px "Cinzel", serif';
     g.fillText(num, x, statsY);
     const nw = g.measureText(num).width;
-    g.fillStyle = MIST;
-    g.font = '400 15px "Cinzel", serif';
+    g.fillStyle = LABEL;
+    g.font = '700 19px "Cinzel", serif';
     g.letterSpacing = '3px';
-    g.fillText(label.toUpperCase(), x, statsY + 30);
+    g.fillText(label.toUpperCase(), x, statsY + 34);
     const lw = g.measureText(label.toUpperCase()).width;
     g.letterSpacing = '0px';
     x += Math.max(nw, lw) + 54;
@@ -134,10 +134,10 @@ function buildOverlay(data) {
   grad.addColorStop(0, '#fff1c4'); grad.addColorStop(0.6, '#e6bd6b'); grad.addColorStop(1, '#a8772c');
   g.fillStyle = grad;
   g.font = '800 34px "Cinzel", serif';
-  g.fillText('HOLD. FARM. ASCEND.', left, H - 84);
-  g.fillStyle = MIST;
-  g.font = '400 22px "Spectral", serif';
-  g.fillText(CONFIG.siteHost, left, H - 52);
+  g.fillText('HOLD. FARM. ASCEND.', left, H - 88);
+  g.fillStyle = BONE;
+  g.font = '500 27px "Spectral", serif';
+  g.fillText(CONFIG.siteHost, left, H - 46);
 
   return o;
 }

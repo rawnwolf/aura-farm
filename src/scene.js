@@ -76,6 +76,63 @@ float rune(vec2 p, float id){
   return smoothstep(0.16, 0.04, d);
 }
 
+// ---------- The cloaked figure (2D signed distance, front view) ----------
+float smin(float a, float b, float k){ float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
+float sdVesica(vec2 p, float r, float d){
+  p = abs(p);
+  float b = sqrt(r * r - d * d);
+  return ((p.y - b) * d > p.x * b) ? length(p - vec2(0.0, b)) : length(p - vec2(-d, 0.0)) - r;
+}
+float sdTrapezoid(vec2 p, float r1, float r2, float he){
+  vec2 k1 = vec2(r2, he), k2 = vec2(r2 - r1, 2.0 * he);
+  p.x = abs(p.x);
+  vec2 ca = vec2(p.x - min(p.x, (p.y < 0.0) ? r1 : r2), abs(p.y) - he);
+  vec2 cb = p - k1 + k2 * clamp(dot(k1 - p, k2) / dot(k2, k2), 0.0, 1.0);
+  float s = (cb.x < 0.0 && ca.y < 0.0) ? -1.0 : 1.0;
+  return s * sqrt(min(dot(ca, ca), dot(cb, cb)));
+}
+float sdEllipse(vec2 p, vec2 r){ return (length(p / r) - 1.0) * min(r.x, r.y); }
+
+const float FIG_S = 0.64;   // figure scale
+// q: portal space. Feet stand on the floor line.
+float figureSD(vec2 q, float floorY, float t){
+  vec2 c = (q - vec2(0.0, floorY)) / FIG_S;
+  c.y -= 0.36;
+  // cloak stirred by the aura, more toward the hem
+  float lower = smoothstep(0.05, -0.36, c.y);
+  c.x += (noise(vec2(c.y * 7.0, t * 0.8)) - 0.5) * 0.025 * lower;
+  vec2 ch = c;
+  ch.y += (noise(vec2(c.x * 16.0, t * 0.5)) - 0.5) * 0.03 * smoothstep(-0.26, -0.36, c.y);
+  float hood = sdVesica(c - vec2(0.0, 0.155), 0.094, 0.024);
+  float shoulders = sdEllipse(c - vec2(0.0, 0.05), vec2(0.118, 0.058));
+  // the cloak flares in a curve toward the hem rather than a straight cone
+  float flare = 1.0 + 0.45 * pow(smoothstep(0.02, -0.36, ch.y), 1.8);
+  ch.x /= flare;
+  float cloak = sdTrapezoid(ch - vec2(0.0, -0.145), 0.15, 0.1, 0.215) * flare;
+  float d = smin(smin(hood, shoulders, 0.035), cloak, 0.05);
+  return d * FIG_S;
+}
+
+// Aura light around the figure: tight inner glow, flame tongues flowing upward, wide bloom.
+vec3 auraAt(vec2 q, float fd, float t){
+  float up = q.y;
+  float flow = fbm(vec2(q.x * 9.0, up * 6.0 - t * 1.4));
+  float flow2 = fbm(vec2(q.x * 18.0 + 3.0, up * 11.0 - t * 2.3));
+  float reach = 0.045 + uIntensity * 0.09;
+  // flames lean upward: stretch distance below the figure's middle, shrink above
+  float fdF = fd - (flow * 0.7 + flow2 * 0.3) * reach * (1.0 + smoothstep(-0.2, 0.15, up) * 1.4);
+  float flames = smoothstep(reach * 0.5, 0.0, fdF);
+  vec3 col = uColor * flames * (0.55 + uIntensity * 0.9);
+  // hot inner edge, toward white-gold
+  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.55) * exp(-max(fd, 0.0) * (70.0 - uIntensity * 25.0)) * (0.7 + uIntensity * 1.1);
+  // wisps streaming upward off the figure
+  float wisp = pow(fbm(vec2(q.x * 26.0, up * 2.6 - t * 1.9)), 3.0) * 2.4;
+  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.25) * wisp * exp(-max(fd, 0.0) * (16.0 - uIntensity * 7.0)) * smoothstep(-0.25, 0.1, up) * (0.3 + uIntensity * 0.9);
+  // wide soft bloom so the aura reads as light around a person
+  col += uColor * exp(-max(fd, 0.0) * (9.0 - uIntensity * 4.0)) * (0.18 + uIntensity * 0.4);
+  return col;
+}
+
 void main(){
   vec2 frag = gl_FragCoord.xy;
   vec2 p = (frag - 0.5 * uRes) / uRes.y;
@@ -98,25 +155,26 @@ void main(){
 
   vec3 col;
 
-  // ---------- Back wall ----------
-  vec2 bw = pw * vec2(5.0, 9.0);
-  bw.x += step(1.0, mod(floor(bw.y), 2.0)) * 0.5;
-  vec2 cell = fract(bw), cid = floor(bw);
-  float mortar = smoothstep(0.0, 0.05, cell.x) * smoothstep(1.0, 0.95, cell.x) * smoothstep(0.0, 0.08, cell.y) * smoothstep(1.0, 0.92, cell.y);
-  float stone = 0.55 + 0.45 * fbm(pw * 14.0 + cid * 3.1);
-  stone *= 0.75 + 0.25 * hash(cid);
-  vec3 wall = vec3(0.045, 0.05, 0.07) * stone * (0.35 + 0.65 * mortar);
-  col = wall * (0.35 + portalLight * 2.2);
-  float pillarX = abs(pw.x - uPortal.x) - 0.78 * uScale;
-  float runeCol = smoothstep(0.03, 0.0, abs(pillarX));
-  vec2 rc = vec2(pillarX * 22.0 + 0.5, pw.y * 11.0);
-  float wallRunes = runeCol * rune(fract(rc), floor(rc.y)) * step(-0.25, pw.y) * step(pw.y, 0.35) * step(uPortal.x - 0.01, pw.x);
-  col += TEAL * wallRunes * (0.5 + 0.3 * sin(t * 1.3 + pw.y * 6.0));
+  // ---------- Background: a dark, misty void instead of a dungeon wall ----------
+  float neb = fbm(pw * 2.6 + vec2(t * 0.015, -t * 0.01));
+  float neb2 = fbm(pw * 5.5 - vec2(t * 0.02, 0.0) + neb);
+  col = vec3(0.012, 0.014, 0.022);
+  col += VIOLET * 0.10 * smoothstep(0.35, 0.9, neb);
+  col += TEAL * 0.035 * smoothstep(0.55, 0.95, neb2);
+  col *= 0.45 + portalLight * 1.6;
+  // faint distant motes
+  vec2 sg = pw * 60.0;
+  vec2 si = floor(sg);
+  float sh = hash(si);
+  if (sh > 0.985) {
+    float tw = 0.5 + 0.5 * sin(t * (0.6 + sh) + sh * 50.0);
+    col += vec3(0.75, 0.8, 0.95) * smoothstep(0.12, 0.0, length(fract(sg) - 0.5)) * tw * 0.35;
+  }
 
   // ---------- Portal opening ----------
   if (dOpen < 0.0) {
-    vec2 vq = (q - vec2(0.0, -0.06)) / 0.55;
-    col = vortex(vq, t);
+    vec2 vq = (q - vec2(0.0, 0.02)) / 0.55;
+    col = vortex(vq, t) * 0.85;
     col *= smoothstep(0.0, -0.05, dOpen) * 0.7 + 0.3;
   }
 
@@ -147,13 +205,13 @@ void main(){
     float fy = floorY - q.y;
     float z = 0.18 / (fy + 0.015);
     vec2 fuv = vec2(q.x * z, z);
-    vec2 tile = fract(fuv * vec2(1.6, 0.9));
-    float grout = smoothstep(0.0, 0.04, tile.x) * smoothstep(0.0, 0.06, tile.y);
     float fstone = 0.5 + 0.5 * fbm(fuv * 3.0);
-    vec3 fl = vec3(0.05, 0.052, 0.068) * fstone * (0.5 + 0.5 * grout);
+    vec3 fl = vec3(0.03, 0.032, 0.045) * fstone;
     vec2 rq = vec2(q.x + (noise(fuv * 6.0 + t * 0.6) - 0.5) * 0.02 * fy * 4.0, floorY + fy);
     float rd = portalSD(rq, w, h + 0.5);
-    vec3 refl = rd < 0.0 ? vortex((rq - vec2(0.0, -0.06)) / 0.55, t) : vec3(0.0);
+    vec3 refl = rd < 0.0 ? vortex((rq - vec2(0.0, 0.02)) / 0.55, t) * 0.85 : vec3(0.0);
+    float rfd = figureSD(rq, floorY, t);
+    if (rfd < 0.0) refl = vec3(0.0); else refl += auraAt(rq, rfd, t) * 0.8;
     float fres = exp(-fy * 3.2);
     fl += refl * 0.75 * fres;
     fl += portalLight * 0.14 * fstone;
@@ -167,6 +225,23 @@ void main(){
       fl += GOLD * coin * (0.5 + 1.0 * tw) * exp(-abs(q.x) * 1.4) * smoothstep(0.0, 0.05, fy);
     }
     col = fl * smoothstep(1.2, 0.0, fy);
+  }
+
+  // ---------- The figure and its aura ----------
+  float fd = figureSD(q, floorY, t);
+  if (q.y >= floorY) {
+    if (fd < 0.0) {
+      // near-black cloak, back-lit by its own aura along the edge
+      float rim = exp(fd * (150.0 - uIntensity * 50.0));
+      col = vec3(0.006, 0.006, 0.012) + mix(uColor, vec3(1.0, 0.95, 0.85), 0.4) * rim * (0.35 + uIntensity * 0.7);
+      // two faint eyes in the hood
+      vec2 c = (q - vec2(0.0, floorY)) / FIG_S - vec2(0.0, 0.36);
+      vec2 e = vec2(abs(c.x) - 0.024, c.y - 0.148);
+      float eye = smoothstep(0.012, 0.0, length(e * vec2(1.0, 2.6)));
+      col += mix(uColor, vec3(1.0), 0.35) * eye * (0.25 + uIntensity * 1.1);
+    } else {
+      col += auraAt(q, fd, t);
+    }
   }
 
   // ---------- Mist ----------
@@ -195,10 +270,11 @@ void main(){
   col += emb * emberMask * (0.5 + uIntensity * 0.9);
 
   // ---------- God rays ----------
-  float ang = atan(q.y, q.x);
+  vec2 rq0 = q - vec2(0.0, floorY + 0.5 * FIG_S);
+  float ang = atan(rq0.y, rq0.x);
   float rays = fbm(vec2(ang * 3.0, t * 0.1));
-  float rl = length(q);
-  col += uColor * pow(rays, 3.0) * 0.35 * exp(-rl * 1.6) * smoothstep(0.2, 0.5, rl) * (0.3 + uIntensity);
+  float rl = length(rq0);
+  col += uColor * pow(rays, 3.0) * 0.3 * exp(-rl * 1.8) * smoothstep(0.12, 0.4, rl) * (0.3 + uIntensity) * step(0.0, fd);
 
   // ---------- Grade ----------
   col *= uDim;
@@ -244,7 +320,7 @@ export function createScene(canvas) {
   });
   scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
 
-  function quality() { return isSmall() ? 0.6 : Math.min(window.devicePixelRatio, 1.5) * 0.7; }
+  function quality() { return isSmall() ? 0.75 : Math.min(window.devicePixelRatio, 1.5) * 0.85; }
 
   function layout() {
     const w = window.innerWidth, h = window.innerHeight;
