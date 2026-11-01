@@ -7,7 +7,7 @@ import '@fontsource/spectral/500.css';
 import './style.css';
 import { CONFIG, TIERS, multiplierFor, tierIndexFor } from './config.js';
 import { createScene } from './scene.js';
-import { makeCard, shareText } from './card.js';
+import { makeCard, makeAnimatedCard, videoSupport, shareText } from './card.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -208,36 +208,116 @@ $('[data-lookup]').addEventListener('submit', async (e) => {
 
 // ---------- Aura cards ----------
 const dialog = $('[data-card-dialog]');
-let cardFile = null;
-let cardUrl = null;
+const img = $('[data-card-img]');
+const video = $('[data-card-video]');
+const progress = $('[data-card-progress]');
+const progressBar = $('[data-card-progress-bar]');
+const saveLink = $('[data-card-save]');
+const shareBtn = $('[data-card-share]');
+const hint = $('[data-card-hint]');
+const modeBtns = $$('[data-card-mode]');
+const videoOk = !!videoSupport();
+if (!videoOk) {
+  const anim = $('[data-card-mode="animated"]');
+  anim.disabled = true;
+  anim.title = 'This browser can’t record video';
+}
+
+let cardData = null;
+let mode = 'still';
+const made = { still: null, animated: null }; // { file, url } per mode for the current card
+let recording = false;
+
+function slug(data) { return `aura-${TIERS[data.tierIndex].name.toLowerCase()}`; }
+function clearMade() {
+  Object.values(made).forEach((m) => m && URL.revokeObjectURL(m.url));
+  made.still = made.animated = null;
+}
+
+function setMode(m) {
+  mode = m;
+  modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cardMode === m)));
+  render();
+}
+
+function render() {
+  const m = made[mode];
+  const isVideo = mode === 'animated';
+  img.hidden = isVideo;
+  video.hidden = !isVideo || !m;
+  progress.hidden = !(isVideo && recording);
+  saveLink.textContent = isVideo ? 'Save video' : 'Save image';
+  const ready = !!m;
+  saveLink.setAttribute('aria-disabled', ready ? 'false' : 'true');
+  saveLink.style.pointerEvents = ready ? '' : 'none';
+  if (!m) { shareBtn.hidden = true; return; }
+  saveLink.href = m.url;
+  saveLink.download = m.file.name;
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [m.file] }));
+  shareBtn.hidden = !canShare;
+  const what = isVideo ? 'video' : 'image';
+  hint.textContent = canShare
+    ? `Share sends the ${what} straight to X, Telegram or anywhere else on your phone.`
+    : `X can’t attach files from a link, so save the ${what} first, then add it to your post.`;
+  if (isVideo && video.src !== m.url) { video.src = m.url; video.play().catch(() => {}); }
+}
+
+shareBtn.addEventListener('click', async () => {
+  const m = made[mode];
+  if (!m) return;
+  try { await navigator.share({ files: [m.file], text: `${shareText(cardData)} ${CONFIG.siteUrl}` }); } catch { /* cancelled */ }
+});
+
+async function makeStill() {
+  const canvas = await makeCard(scene, cardData);
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  const file = new File([blob], `${slug(cardData)}.png`, { type: 'image/png' });
+  made.still = { file, url: URL.createObjectURL(blob) };
+  img.src = made.still.url;
+  img.alt = `Aura card: ${TIERS[cardData.tierIndex].name} tier, ${cardData.multiplier.toFixed(2)}× multiplier`;
+}
+
+async function makeAnimated() {
+  if (recording || made.animated) return;
+  recording = true;
+  progressBar.style.width = '0%';
+  $('[data-card-progress-label]').textContent = 'Recording your aura';
+  render();
+  const forData = cardData;
+  try {
+    const { blob, ext, mime } = await makeAnimatedCard(scene, forData, {
+      onProgress: (p) => { progressBar.style.width = `${Math.round(p * 100)}%`; },
+    });
+    if (forData !== cardData) return; // a different card was opened meanwhile
+    const file = new File([blob], `${slug(forData)}.${ext}`, { type: mime });
+    made.animated = { file, url: URL.createObjectURL(blob) };
+  } catch {
+    $('[data-card-progress-label]').textContent = 'Recording didn’t work in this browser. Try the still card.';
+    recording = false;
+    progress.hidden = false;
+    return;
+  } finally {
+    recording = false;
+  }
+  render();
+}
+
+modeBtns.forEach((b) => b.addEventListener('click', () => {
+  if (b.disabled) return;
+  setMode(b.dataset.cardMode);
+  if (b.dataset.cardMode === 'animated') makeAnimated();
+}));
 
 async function openCard(data) {
   const btns = $$('[data-card-sim], [data-card-wallet]');
   btns.forEach((b) => (b.disabled = true));
   try {
-    const canvas = await makeCard(scene, data);
-    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-    if (cardUrl) URL.revokeObjectURL(cardUrl);
-    cardUrl = URL.createObjectURL(blob);
-    cardFile = new File([blob], `aura-${TIERS[data.tierIndex].name.toLowerCase()}.png`, { type: 'image/png' });
-
-    $('[data-card-img]').src = cardUrl;
-    $('[data-card-img]').alt = `Aura card: ${TIERS[data.tierIndex].name} tier, ${data.multiplier.toFixed(2)}× multiplier`;
-    const save = $('[data-card-save]');
-    save.href = cardUrl;
-    save.download = cardFile.name;
-
-    const text = shareText(data);
-    $('[data-card-x]').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(CONFIG.siteUrl)}`;
-    const shareBtn = $('[data-card-share]');
-    const canShareFile = !!(navigator.canShare && navigator.canShare({ files: [cardFile] }));
-    shareBtn.hidden = !canShareFile;
-    $('[data-card-hint]').textContent = canShareFile
-      ? 'Share sends the image straight to X, Telegram or anywhere else on your phone.'
-      : 'X can’t attach images from a link, so save the image first, then add it to your post.';
-    shareBtn.onclick = async () => {
-      try { await navigator.share({ files: [cardFile], text: `${text} ${CONFIG.siteUrl}` }); } catch { /* cancelled */ }
-    };
+    clearMade();
+    cardData = data;
+    video.removeAttribute('src');
+    await makeStill();
+    $('[data-card-x]').href = `https://x.com/intent/post?text=${encodeURIComponent(shareText(data))}&url=${encodeURIComponent(CONFIG.siteUrl)}`;
+    setMode('still');
     dialog.showModal();
   } finally {
     btns.forEach((b) => (b.disabled = false));
@@ -250,6 +330,7 @@ $('[data-card-sim]').addEventListener('click', () => {
 });
 $('[data-card-close]').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+dialog.addEventListener('close', () => video.pause());
 
 // Used to render the link-preview image
-window.__aura = { makeCard: (d) => makeCard(scene, d) };
+window.__aura = { makeCard: (d) => makeCard(scene, d), makeAnimatedCard: (d, o) => makeAnimatedCard(scene, d, o) };

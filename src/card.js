@@ -27,40 +27,40 @@ function corner(g, x, y, sx, sy) {
   g.restore();
 }
 
-/**
- * Draw an aura card.
- * data: { tierIndex, multiplier, days, aura?, wallet? }
- * A card with no aura value is a preview from the tier slider, so its wording says "farming toward".
- */
-export async function makeCard(scene, data) {
-  await fontsReady();
-  const t = TIERS[data.tierIndex];
-  const real = data.aura != null;
-  const intensity = 0.25 + ((data.multiplier - 1) / 2) * 0.85;
+const FIG_X = 560, FIG_W = W - FIG_X;
 
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const g = out.getContext('2d');
+function intensityFor(data) { return 0.25 + ((data.multiplier - 1) / 2) * 0.85; }
+
+// Draw the live portal at this tier into the right side of the card.
+function drawPortal(g, scene, t, intensity) {
   g.fillStyle = '#05070a';
   g.fillRect(0, 0, W, H);
-
-  // The portal, rendered live at this tier, on the right
-  const figX = 560, figW = W - figX;
   if (scene) {
     scene.snapshot(t.color, intensity, ({ canvas, cx, top, bottom }) => {
       const srcH = bottom - top;
-      const srcW = srcH * (figW / H);
-      g.drawImage(canvas, cx - srcW / 2, top, srcW, srcH, figX, 0, figW, H);
+      const srcW = srcH * (FIG_W / H);
+      g.drawImage(canvas, cx - srcW / 2, top, srcW, srcH, FIG_X, 0, FIG_W, H);
     });
   } else {
-    const glow = g.createRadialGradient(figX + figW / 2, H * 0.42, 10, figX + figW / 2, H * 0.42, 340);
+    const glow = g.createRadialGradient(FIG_X + FIG_W / 2, H * 0.42, 10, FIG_X + FIG_W / 2, H * 0.42, 340);
     glow.addColorStop(0, t.color); glow.addColorStop(1, 'rgba(5,7,10,0)');
-    g.fillStyle = glow; g.fillRect(figX, 0, figW, H);
+    g.fillStyle = glow; g.fillRect(FIG_X, 0, FIG_W, H);
   }
-  const fade = g.createLinearGradient(figX - 20, 0, figX + 200, 0);
+}
+
+// Everything that sits on top of the portal: the dark text side, frame and words.
+// Drawn once, then reused for every frame of an animated card.
+function buildOverlay(data) {
+  const t = TIERS[data.tierIndex];
+  const real = data.aura != null;
+  const o = document.createElement('canvas');
+  o.width = W; o.height = H;
+  const g = o.getContext('2d');
+
+  const fade = g.createLinearGradient(FIG_X - 20, 0, FIG_X + 200, 0);
   fade.addColorStop(0, 'rgba(5,7,10,1)'); fade.addColorStop(1, 'rgba(5,7,10,0)');
-  g.fillStyle = fade; g.fillRect(figX - 20, 0, 220, H);
-  g.fillStyle = '#05070a'; g.fillRect(0, 0, figX - 20, H);
+  g.fillStyle = fade; g.fillRect(FIG_X - 20, 0, 220, H);
+  g.fillStyle = '#05070a'; g.fillRect(0, 0, FIG_X - 20, H);
 
   // Gold frame
   g.strokeStyle = 'rgba(217,181,106,0.45)'; g.lineWidth = 2;
@@ -103,7 +103,7 @@ export async function makeCard(scene, data) {
   let size = 112;
   g.font = `800 ${size}px "Cinzel", serif`;
   const name = t.name.toUpperCase();
-  while (g.measureText(name).width > figX - left - 10 && size > 60) { size -= 4; g.font = `800 ${size}px "Cinzel", serif`; }
+  while (g.measureText(name).width > FIG_X - left - 10 && size > 60) { size -= 4; g.font = `800 ${size}px "Cinzel", serif`; }
   g.shadowColor = t.color; g.shadowBlur = 38;
   g.fillStyle = t.color;
   g.fillText(name, left - 3, 226 + size * 0.95);
@@ -139,7 +139,82 @@ export async function makeCard(scene, data) {
   g.font = '400 22px "Spectral", serif';
   g.fillText(CONFIG.siteHost, left, H - 52);
 
+  return o;
+}
+
+/**
+ * A still aura card.
+ * data: { tierIndex, multiplier, days, aura?, wallet? }
+ * A card with no aura value is a preview from the tier slider, so its wording says "farming toward".
+ */
+export async function makeCard(scene, data) {
+  await fontsReady();
+  const t = TIERS[data.tierIndex];
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const g = out.getContext('2d');
+  drawPortal(g, scene, t, intensityFor(data));
+  g.drawImage(buildOverlay(data), 0, 0);
   return out;
+}
+
+const VIDEO_TYPES = [
+  ['video/mp4;codecs=avc1.42E01E', 'mp4'],
+  ['video/mp4;codecs=avc1', 'mp4'],
+  ['video/mp4', 'mp4'],
+  ['video/webm;codecs=vp9', 'webm'],
+  ['video/webm', 'webm'],
+];
+export function videoSupport() {
+  if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) return null;
+  const hit = VIDEO_TYPES.find(([m]) => MediaRecorder.isTypeSupported(m));
+  return hit ? { mime: hit[0], ext: hit[1] } : null;
+}
+
+/**
+ * An animated aura card: records the live portal swirling behind the card.
+ * Resolves to { blob, ext, mime }. onProgress gets 0..1.
+ */
+export async function makeAnimatedCard(scene, data, { seconds = 6, fps = 30, onProgress } = {}) {
+  const support = videoSupport();
+  if (!support) throw new Error('This browser can\'t record video.');
+  await fontsReady();
+  const t = TIERS[data.tierIndex];
+  const intensity = intensityFor(data);
+  const overlay = buildOverlay(data);
+
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const g = out.getContext('2d');
+  const draw = () => { drawPortal(g, scene, t, intensity); g.drawImage(overlay, 0, 0); };
+  draw();
+
+  const stream = out.captureStream(fps);
+  const rec = new MediaRecorder(stream, { mimeType: support.mime, videoBitsPerSecond: 8_000_000 });
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise((resolve, reject) => {
+    rec.onstop = () => resolve();
+    rec.onerror = (e) => reject(e.error || new Error('Recording failed'));
+  });
+
+  rec.start(250);
+  const start = performance.now();
+  const total = seconds * 1000;
+  await new Promise((resolve) => {
+    const tick = (now) => {
+      draw();
+      const p = Math.min((now - start) / total, 1);
+      onProgress?.(p);
+      if (p < 1) requestAnimationFrame(tick); else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
+  rec.stop();
+  await done;
+  stream.getTracks().forEach((tr) => tr.stop());
+  const mime = support.mime.split(';')[0];
+  return { blob: new Blob(chunks, { type: mime }), ext: support.ext, mime };
 }
 
 export function shareText(data) {

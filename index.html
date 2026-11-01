@@ -164,7 +164,18 @@
 
   <dialog class="card-dialog frame" data-card-dialog aria-labelledby="card-h">
     <h2 id="card-h" class="visually-hidden">Your aura card</h2>
-    <img data-card-img alt="" width="1200" height="675" />
+    <div class="card-mode" role="group" aria-label="Card type">
+      <button type="button" data-card-mode="still" aria-pressed="true">Still</button>
+      <button type="button" data-card-mode="animated" aria-pressed="false">Animated</button>
+    </div>
+    <div class="card-stage">
+      <img data-card-img alt="" width="1200" height="675" />
+      <video data-card-video width="1200" height="675" muted loop playsinline autoplay hidden></video>
+      <div class="card-progress" data-card-progress hidden>
+        <p data-card-progress-label>Recording your aura</p>
+        <div class="bar"><span data-card-progress-bar></span></div>
+      </div>
+    </div>
     <div class="card-actions">
       <button class="btn btn-gold" type="button" data-card-share>Share</button>
       <a class="btn btn-dark" data-card-x href="#" target="_blank" rel="noopener">Post on X</a>
