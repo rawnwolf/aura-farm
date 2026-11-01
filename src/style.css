@@ -325,7 +325,8 @@ input[type='range']::-moz-range-thumb {
 .foot-links a:hover { color: var(--gold-hi); }
 
 /* Card dialog */
-.card-dialog {
+.frame.card-dialog {
+  position: fixed; inset: 0; margin: auto; height: fit-content;
   width: min(900px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: visible;
   padding: 18px; color: var(--bone);
 }
