@@ -86,7 +86,30 @@ const float FIG_H = 0.62;  // figure canvas height in portal units (2:3 canvas)
 const float FIG_W = FIG_H * 2.0 / 3.0;
 const float FIG_FOOT = 0.02; // feet sit this far up the canvas
 
-vec2 figUV(vec2 q, float floorY){ return vec2(q.x / FIG_W + 0.5, (q.y - floorY) / FIG_H + FIG_FOOT); }
+// Cape motion: the flowing flap (right), the torn tails (left) and the coat hem ripple and sway.
+// The body, hood, hands and boots stay still. Weights are in the figure image's UV space.
+vec2 capeWarp(vec2 uv){
+  float wR = smoothstep(0.755, 0.9, uv.x);
+  float wL = smoothstep(0.255, 0.11, uv.x) * smoothstep(0.52, 0.4, uv.y);
+  float wH = smoothstep(0.2, 0.08, uv.y) * smoothstep(0.12, 0.18, abs(uv.x - 0.51));
+  float w = max(max(wR, wL), wH * 0.6);
+  if (w <= 0.0) return uv;
+  float t = uTime;
+  float amp = (0.011 + uIntensity * 0.012) * w;
+  float n = noise(vec2(uv.y * 5.0 - t * 0.7, uv.x * 3.0));
+  // waves travelling up the fabric, plus a slow sway and a little turbulence
+  float wave = sin(uv.y * 16.0 - t * 2.4 + n * 3.0);
+  float side = uv.x > 0.5 ? 1.0 : -1.0;
+  vec2 d = vec2(
+    wave * amp + sin(t * 0.9 + uv.y * 2.0) * amp * 0.8 * side,
+    cos(uv.x * 14.0 - t * 2.0 + n * 2.0) * amp * 0.6
+  );
+  return uv - d;
+}
+vec2 figUV(vec2 q, float floorY){
+  vec2 uv = vec2(q.x / FIG_W + 0.5, (q.y - floorY) / FIG_H + FIG_FOOT);
+  return capeWarp(uv);
+}
 float inUV(vec2 uv){ return step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0); }
 vec4 figAt(vec2 q, float floorY){ vec2 uv = figUV(q, floorY); return texture2D(uFig, uv) * inUV(uv) * uFigOn; }
 vec3 glowAt(vec2 q, float floorY){ vec2 uv = figUV(q, floorY); return texture2D(uGlow, uv).rgb * inUV(uv) * uFigOn; }
