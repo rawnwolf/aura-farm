@@ -327,8 +327,8 @@ export function createScene(canvas) {
     const aspect = w / h;
     const s = Math.min(state.scroll, 1);
     if (isSmall()) {
-      uniforms.uPortal.value.set(0, 0.2 - s * 0.08);
-      uniforms.uScale.value = Math.min(1, aspect * 1.6) * 0.82;
+      uniforms.uPortal.value.set(0, 0.29 - s * 0.08);
+      uniforms.uScale.value = Math.min(1, aspect * 1.6) * 0.74;
     } else {
       uniforms.uPortal.value.set(Math.min(0.5 * aspect - 0.48, 0.42 * aspect - 0.18), 0.05);
       uniforms.uScale.value = 1;
