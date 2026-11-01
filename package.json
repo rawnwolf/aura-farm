@@ -1,0 +1,29 @@
+{
+  "name": "aura-farm",
+  "version": "1.0.0",
+  "description": "Hold $AURA to farm aura. Site + farming server.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rawnwolf/aura-farm.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rawnwolf/aura-farm/issues"
+  },
+  "homepage": "https://github.com/rawnwolf/aura-farm#readme",
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.21"
+  },
+  "type": "module",
+  "private": true
+}
