@@ -76,61 +76,38 @@ float rune(vec2 p, float id){
   return smoothstep(0.16, 0.04, d);
 }
 
-// ---------- The cloaked figure (2D signed distance, front view) ----------
-float smin(float a, float b, float k){ float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
-float sdVesica(vec2 p, float r, float d){
-  p = abs(p);
-  float b = sqrt(r * r - d * d);
-  return ((p.y - b) * d > p.x * b) ? length(p - vec2(0.0, b)) : length(p - vec2(-d, 0.0)) - r;
-}
-float sdTrapezoid(vec2 p, float r1, float r2, float he){
-  vec2 k1 = vec2(r2, he), k2 = vec2(r2 - r1, 2.0 * he);
-  p.x = abs(p.x);
-  vec2 ca = vec2(p.x - min(p.x, (p.y < 0.0) ? r1 : r2), abs(p.y) - he);
-  vec2 cb = p - k1 + k2 * clamp(dot(k1 - p, k2) / dot(k2, k2), 0.0, 1.0);
-  float s = (cb.x < 0.0 && ca.y < 0.0) ? -1.0 : 1.0;
-  return s * sqrt(min(dot(ca, ca), dot(cb, cb)));
-}
-float sdEllipse(vec2 p, vec2 r){ return (length(p / r) - 1.0) * min(r.x, r.y); }
+// ---------- The figure: a cut-out character image, lit by its own aura ----------
+uniform sampler2D uFig;    // RGBA cut-out
+uniform sampler2D uGlow;   // its alpha blurred at three radii (R small, G medium, B wide)
+uniform float uFigOn;      // 0 until the textures load
+uniform vec2 uEye;         // eye centre in figure UV (origin bottom-left)
+uniform float uEyeSpread;  // half-distance between the eyes in figure UV
+const float FIG_H = 0.62;  // figure canvas height in portal units (2:3 canvas)
+const float FIG_W = FIG_H * 2.0 / 3.0;
+const float FIG_FOOT = 0.02; // feet sit this far up the canvas
 
-const float FIG_S = 0.64;   // figure scale
-// q: portal space. Feet stand on the floor line.
-float figureSD(vec2 q, float floorY, float t){
-  vec2 c = (q - vec2(0.0, floorY)) / FIG_S;
-  c.y -= 0.36;
-  // cloak stirred by the aura, more toward the hem
-  float lower = smoothstep(0.05, -0.36, c.y);
-  c.x += (noise(vec2(c.y * 7.0, t * 0.8)) - 0.5) * 0.025 * lower;
-  vec2 ch = c;
-  ch.y += (noise(vec2(c.x * 16.0, t * 0.5)) - 0.5) * 0.03 * smoothstep(-0.26, -0.36, c.y);
-  float hood = sdVesica(c - vec2(0.0, 0.155), 0.094, 0.024);
-  float shoulders = sdEllipse(c - vec2(0.0, 0.05), vec2(0.118, 0.058));
-  // the cloak flares in a curve toward the hem rather than a straight cone
-  float flare = 1.0 + 0.45 * pow(smoothstep(0.02, -0.36, ch.y), 1.8);
-  ch.x /= flare;
-  float cloak = sdTrapezoid(ch - vec2(0.0, -0.145), 0.15, 0.1, 0.215) * flare;
-  float d = smin(smin(hood, shoulders, 0.035), cloak, 0.05);
-  return d * FIG_S;
-}
+vec2 figUV(vec2 q, float floorY){ return vec2(q.x / FIG_W + 0.5, (q.y - floorY) / FIG_H + FIG_FOOT); }
+float inUV(vec2 uv){ return step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0); }
+vec4 figAt(vec2 q, float floorY){ vec2 uv = figUV(q, floorY); return texture2D(uFig, uv) * inUV(uv) * uFigOn; }
+vec3 glowAt(vec2 q, float floorY){ vec2 uv = figUV(q, floorY); return texture2D(uGlow, uv).rgb * inUV(uv) * uFigOn; }
 
-// Aura light around the figure: tight inner glow, flame tongues flowing upward, wide bloom.
-vec3 auraAt(vec2 q, float fd, float t){
-  float up = q.y;
-  float flow = fbm(vec2(q.x * 9.0, up * 6.0 - t * 1.4));
-  float flow2 = fbm(vec2(q.x * 18.0 + 3.0, up * 11.0 - t * 2.3));
-  float reach = 0.045 + uIntensity * 0.09;
-  // flames lean upward: stretch distance below the figure's middle, shrink above
-  float fdF = fd - (flow * 0.7 + flow2 * 0.3) * reach * (1.0 + smoothstep(-0.2, 0.15, up) * 1.4);
-  float flames = smoothstep(reach * 0.5, 0.0, fdF);
-  vec3 col = uColor * flames * (0.55 + uIntensity * 0.9);
-  // hot inner edge, toward white-gold
-  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.55) * exp(-max(fd, 0.0) * (70.0 - uIntensity * 25.0)) * (0.7 + uIntensity * 1.1);
-  // wisps streaming upward off the figure
-  float wisp = pow(fbm(vec2(q.x * 26.0, up * 2.6 - t * 1.9)), 3.0) * 2.4;
-  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.25) * wisp * exp(-max(fd, 0.0) * (16.0 - uIntensity * 7.0)) * smoothstep(-0.25, 0.1, up) * (0.3 + uIntensity * 0.9);
-  // wide soft bloom so the aura reads as light around a person
-  col += uColor * exp(-max(fd, 0.0) * (9.0 - uIntensity * 4.0)) * (0.18 + uIntensity * 0.4);
-  return col;
+// Aura light around the figure: hot inner edge, flame tongues rising, upward wisps, wide bloom.
+vec3 auraAt(vec2 q, float floorY, float alpha, float t){
+  float flow = fbm(vec2(q.x * 9.0, q.y * 6.0 - t * 1.4));
+  float flow2 = fbm(vec2(q.x * 18.0 + 3.0, q.y * 11.0 - t * 2.3));
+  // sample the glow from slightly below and to the side, so the light streams upward like flames
+  float lift = (0.025 + uIntensity * 0.06) * (flow * 0.75 + flow2 * 0.25);
+  vec2 off = vec2((flow2 - 0.5) * 0.02, -lift);
+  vec3 g = glowAt(q + off, floorY);
+  vec3 g0 = glowAt(q, floorY);
+  float outside = 1.0 - alpha;
+  float flames = smoothstep(0.04, 0.42, g.g * (0.5 + flow * 1.0)) * (0.75 + uIntensity * 1.4);
+  vec3 col = uColor * flames;
+  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.5) * pow(g0.r, 1.2) * (1.3 + uIntensity * 1.8);
+  float wisp = pow(fbm(vec2(q.x * 26.0, q.y * 2.6 - t * 1.9)), 3.0) * 2.4;
+  col += mix(uColor, vec3(1.0, 0.95, 0.85), 0.25) * wisp * g.b * smoothstep(-0.25, 0.1, q.y) * (0.35 + uIntensity * 1.0);
+  col += uColor * g.b * (0.3 + uIntensity * 0.7);
+  return col * outside;
 }
 
 void main(){
@@ -210,8 +187,8 @@ void main(){
     vec2 rq = vec2(q.x + (noise(fuv * 6.0 + t * 0.6) - 0.5) * 0.02 * fy * 4.0, floorY + fy);
     float rd = portalSD(rq, w, h + 0.5);
     vec3 refl = rd < 0.0 ? vortex((rq - vec2(0.0, 0.02)) / 0.55, t) * 0.85 : vec3(0.0);
-    float rfd = figureSD(rq, floorY, t);
-    if (rfd < 0.0) refl = vec3(0.0); else refl += auraAt(rq, rfd, t) * 0.8;
+    vec4 rf = figAt(rq, floorY);
+    refl = refl * (1.0 - rf.a) + rf.rgb * 0.25 + auraAt(rq, floorY, rf.a, t) * 0.8;
     float fres = exp(-fy * 3.2);
     fl += refl * 0.75 * fres;
     fl += portalLight * 0.14 * fstone;
@@ -228,20 +205,23 @@ void main(){
   }
 
   // ---------- The figure and its aura ----------
-  float fd = figureSD(q, floorY, t);
+  vec4 fg = figAt(q, floorY);
+  float fa = fg.a;
   if (q.y >= floorY) {
-    if (fd < 0.0) {
-      // near-black cloak, back-lit by its own aura along the edge
-      float rim = exp(fd * (150.0 - uIntensity * 50.0));
-      col = vec3(0.006, 0.006, 0.012) + mix(uColor, vec3(1.0, 0.95, 0.85), 0.4) * rim * (0.35 + uIntensity * 0.7);
-      // two faint eyes in the hood
-      vec2 c = (q - vec2(0.0, floorY)) / FIG_S - vec2(0.0, 0.36);
-      vec2 e = vec2(abs(c.x) - 0.024, c.y - 0.148);
-      float eye = smoothstep(0.012, 0.0, length(e * vec2(1.0, 2.6)));
-      col += mix(uColor, vec3(1.0), 0.35) * eye * (0.25 + uIntensity * 1.1);
-    } else {
-      col += auraAt(q, fd, t);
+    col += auraAt(q, floorY, fa, t);
+    if (fa > 0.0) {
+      vec3 g0 = glowAt(q, floorY);
+      // back-lit: the cloth stays dark, its edges catch the aura
+      float rim = smoothstep(0.99, 0.55, g0.r);
+      vec3 body = fg.rgb * (0.62 + 0.25 * uColor) + mix(uColor, vec3(1.0, 0.95, 0.85), 0.35) * rim * (0.35 + uIntensity * 0.8);
+      col = mix(col, body, fa);
     }
+    // two faint eyes in the hood, glowing in the tier colour
+    vec2 uv = figUV(q, floorY);
+    vec2 de = vec2(abs(uv.x - uEye.x) - uEyeSpread, uv.y - uEye.y) * vec2(FIG_W, FIG_H);
+    float er = length(de * vec2(1.0, 2.4));
+    float eye = smoothstep(0.0045, 0.0, er) + exp(-er * 260.0) * 0.6;
+    col += mix(uColor, vec3(1.0), 0.4) * eye * (0.35 + uIntensity * 1.3) * uFigOn;
   }
 
   // ---------- Mist ----------
@@ -270,11 +250,11 @@ void main(){
   col += emb * emberMask * (0.5 + uIntensity * 0.9);
 
   // ---------- God rays ----------
-  vec2 rq0 = q - vec2(0.0, floorY + 0.5 * FIG_S);
+  vec2 rq0 = q - vec2(0.0, floorY + 0.42);
   float ang = atan(rq0.y, rq0.x);
   float rays = fbm(vec2(ang * 3.0, t * 0.1));
   float rl = length(rq0);
-  col += uColor * pow(rays, 3.0) * 0.3 * exp(-rl * 1.8) * smoothstep(0.12, 0.4, rl) * (0.3 + uIntensity) * step(0.0, fd);
+  col += uColor * pow(rays, 3.0) * 0.3 * exp(-rl * 1.8) * smoothstep(0.12, 0.4, rl) * (0.3 + uIntensity) * (1.0 - fa);
 
   // ---------- Grade ----------
   col *= uDim;
@@ -311,7 +291,34 @@ export function createScene(canvas) {
     uPortal: { value: new THREE.Vector2(0.45, 0.02) },
     uScale: { value: 1 },
     uPointer: { value: state.pointer },
+    uFig: { value: null },
+    uGlow: { value: null },
+    uFigOn: { value: 0 },
+    uEye: { value: new THREE.Vector2(0.5, 0.66) },
+    uEyeSpread: { value: 0.0148 },
   };
+
+  // The figure art. ?fig=standing or ?fig=cape picks a version while we compare them.
+  const FIGS = {
+    cape: { eye: [0.5011, 0.6806], spread: 0.0148 },
+    standing: { eye: [0.5016, 0.6578], spread: 0.0148 },
+  };
+  const figName = new URLSearchParams(location.search).get('fig') in FIGS
+    ? new URLSearchParams(location.search).get('fig') : 'cape';
+  const loader = new THREE.TextureLoader();
+  const loadTex = (url) => new Promise((res, rej) => loader.load(url, (tx) => {
+    tx.colorSpace = THREE.NoColorSpace;
+    tx.minFilter = THREE.LinearFilter;
+    tx.generateMipmaps = false;
+    res(tx);
+  }, undefined, rej));
+  Promise.all([loadTex(`/fig/${figName}.png`), loadTex(`/fig/${figName}-glow.png`)]).then(([f, g]) => {
+    uniforms.uFig.value = f;
+    uniforms.uGlow.value = g;
+    uniforms.uEye.value.set(...FIGS[figName].eye);
+    uniforms.uEyeSpread.value = FIGS[figName].spread;
+    uniforms.uFigOn.value = 1;
+  }).catch(() => {});
   const mat = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
