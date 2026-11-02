@@ -30,3 +30,11 @@ Vercel settings that control it:
 - `GAME_KEY` — the launchpad game key. `HELIUS_API_KEY` — reads real wallet balances.
 - `CRON_SECRET` — required to call `/api/harvest` (Vercel Cron sends it).
 - Optional: `HARVEST_SHARE` (default 0.25), `HARVEST_HOUR_UTC` (default 17), `EXCLUDE_WALLETS` (comma list).
+
+## Telegram bot, harvest cards, copycat watch
+
+- `api/telegram.js` — bot commands: `/aura <wallet>`, `/top`, `/harvest`, `/ca`, `/help`, `/chatid`.
+- `api/telegram-setup.js` — run once (with the cron secret) after adding `TELEGRAM_BOT_TOKEN`.
+- After each live harvest, a recap image + caption is posted to `TELEGRAM_CHAT_ID`. The image is also at `/api/card`.
+- `api/watch.js` — daily copycat check (14:00 UTC) on the Veilbound launchpad and DexScreener; alerts go to
+  `TELEGRAM_ALERT_CHAT_ID` (or `TELEGRAM_CHAT_ID` if that isn't set).

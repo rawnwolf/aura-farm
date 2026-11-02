@@ -1,8 +1,34 @@
 {
-  "crons": [{ "path": "/api/harvest", "schedule": "0 17 * * *" }],
+  "crons": [
+    {
+      "path": "/api/harvest",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/watch",
+      "schedule": "0 14 * * *"
+    }
+  ],
   "functions": {
-    "api/harvest.js": { "maxDuration": 300 },
-    "api/state.js": { "maxDuration": 60 },
-    "api/aura.js": { "maxDuration": 60 }
+    "api/harvest.js": {
+      "maxDuration": 300,
+      "includeFiles": "lib/**"
+    },
+    "api/state.js": {
+      "maxDuration": 60
+    },
+    "api/aura.js": {
+      "maxDuration": 60
+    },
+    "api/telegram.js": {
+      "maxDuration": 60
+    },
+    "api/card.js": {
+      "maxDuration": 60,
+      "includeFiles": "lib/**"
+    },
+    "api/watch.js": {
+      "maxDuration": 60
+    }
   }
 }

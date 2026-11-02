@@ -11,6 +11,7 @@ import { loadFarm, MINT, HARVEST_SHARE } from '../lib/farm.js';
 import { planHarvest } from '../lib/engine.js';
 import { payout } from '../lib/sources.js';
 import { readJSON, writeJSON } from '../lib/store.js';
+import { recapOf, announceHarvest } from '../lib/recap.js';
 
 const short = (w) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
@@ -89,16 +90,19 @@ export default async function handler(req, res) {
   // A harvest that paid anyone closes the farming period.
   if (report.status === 'partial') report.status = 'done';
   ledger.carry = carry;
-  return finish(ledger, report, true, res);
+  return finish(ledger, report, true, res, f.rows);
 }
 
-async function finish(ledger, report, live, res) {
+async function finish(ledger, report, live, res, rows = []) {
   if (live) {
     ledger.harvests = [...ledger.harvests, report].slice(-120);
   } else {
     ledger.lastDryRun = report;
   }
   await writeJSON('harvests.json', ledger);
+  if (live && report.status === 'done') {
+    try { await announceHarvest(recapOf(report, rows, ledger)); } catch (e) { console.error('announce failed:', e.message); }
+  }
   const summary = {
     status: report.status, reason: report.reason, mode: report.mode, id: report.id,
     bankroll: `${Math.round(report.bankrollVeil || 0)} VEIL ($${(report.bankrollUsd || 0).toFixed(2)})`,
