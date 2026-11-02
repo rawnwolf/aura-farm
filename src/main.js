@@ -178,6 +178,10 @@ $('[data-lookup]').addEventListener('submit', async (e) => {
   out.innerHTML = '<p class="muted">Reading your aura…</p>';
   try {
     const a = await getJSON(`/api/aura?wallet=${encodeURIComponent(wallet)}`);
+    if (a.phase === 'counting') {
+      out.innerHTML = `<p>Your aura is already counting.</p><p class="muted">Farming started at launch and every hour you hold is recorded on chain. Your tier and harvest share show here when the first harvest opens.</p>`;
+      return;
+    }
     if (!a.holding) {
       out.innerHTML = `<p>This wallet isn’t farming yet.</p><p class="muted">Buy and hold $AURA and it starts at Spark.</p>`;
       applyTier(0);

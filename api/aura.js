@@ -9,6 +9,6 @@ export default function handler(req, res) {
   if (!process.env.AURA_MINT) {
     return res.status(200).json({ phase: 'prelaunch', holding: false });
   }
-  // Placeholder until the farming engine is connected.
-  return res.status(200).json({ phase: 'live', holding: false });
+  // Until the farming engine is connected: aura is counted from on-chain history, so nothing is lost.
+  return res.status(200).json({ phase: 'counting' });
 }

@@ -1,9 +1,9 @@
 // Everything Tori may need to change lives here.
 export const CONFIG = {
   // Set the coin's mint address after launch. Empty = pre-launch mode.
-  mint: '',
+  mint: '53SxRC5zJwAcfEsR2Uxj8ep8RnVinH7KZd2n95JwMRwv',
   // Coin page on the Veilbound launchpad (set after launch).
-  buyUrl: '',
+  buyUrl: 'https://launch.veilbound.gg/ecosystem/aura',
   launchpadUrl: 'https://launch.veilbound.gg',
   siteHost: 'auraveil.xyz',
   siteUrl: 'https://auraveil.xyz',
