@@ -323,7 +323,7 @@ export function createScene(canvas) {
 
   // The figure art. ?fig=standing or ?fig=cape picks a version while we compare them.
   const FIGS = {
-    cape: { eye: [0.5011, 0.6806], spread: 0.0148 },
+    cape: { eye: [0.5016, 0.6838], spread: 0.0148 },
     standing: { eye: [0.5016, 0.6578], spread: 0.0148 },
   };
   const figName = new URLSearchParams(location.search).get('fig') in FIGS

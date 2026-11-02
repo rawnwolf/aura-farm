@@ -6,7 +6,9 @@ from PIL import Image, ImageFilter
 from scipy import ndimage as ndi
 
 name, face = sys.argv[1], json.loads(sys.argv[2])  # face: [cx, cy, rx, ry] in source pixels
-src = np.asarray(Image.open(f'src/{name}.jpg').convert('RGB')).astype(np.float32)
+srcfile = sys.argv[3] if len(sys.argv) > 3 else f'src/{name}.jpg'
+K = float(sys.argv[4]) if len(sys.argv) > 4 else 1.0   # source scale vs the original 687px-wide images
+src = np.asarray(Image.open(srcfile).convert('RGB')).astype(np.float32)
 H, W = src.shape[:2]
 L = src.mean(2)
 
@@ -17,12 +19,12 @@ sizes = ndi.sum(white, lab, range(1, n + 1))
 border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
 keep = np.zeros(n + 1, bool)
 for i in range(1, n + 1):
-    if i in border or sizes[i - 1] >= 4:
+    if i in border or sizes[i - 1] >= 4 * K * K:
         keep[i] = True
 bg = keep[lab]
 
 # Soft alpha only in a thin band next to the background; solid inside the figure
-band = ndi.binary_dilation(bg, iterations=3) & ~bg
+band = ndi.binary_dilation(bg, iterations=max(3, int(round(3 * K)))) & ~bg
 alpha = np.ones((H, W), np.float32)
 alpha[bg] = 0.0
 alpha[band] = np.clip((250.0 - L[band]) / (250.0 - 105.0), 0.0, 1.0)
@@ -41,14 +43,14 @@ fg *= (0.04 + 0.96 * shade)[..., None]
 
 # Trim to the figure with a small margin
 ys, xs = np.where(alpha > 0.02)
-pad = 24
+pad = int(24 * K)
 y0, y1 = max(ys.min() - pad, 0), min(ys.max() + pad, H)
 x0, x1 = max(xs.min() - pad, 0), min(xs.max() + pad, W)
 fg, alpha = fg[y0:y1, x0:x1], alpha[y0:y1, x0:x1]
 h, w = alpha.shape
 
 # Place on a fixed 2:3 canvas with room around it for the aura: feet near the bottom, centred
-CW, CH = 768, 1152
+CW, CH = (1536, 2304) if K > 1.5 else (768, 1152)
 scale = min((CW * 0.78) / w, (CH * 0.86) / h)
 nw, nh = int(round(w * scale)), int(round(h * scale))
 rgba = np.dstack([fg, alpha * 255]).astype(np.uint8)
@@ -62,7 +64,8 @@ canvas.save(f'../../public/fig/{name}.png', optimize=True)
 A = canvas.split()[3]
 def blur(r):
     return np.asarray(A.filter(ImageFilter.GaussianBlur(r))).astype(np.float32)
-g = np.dstack([blur(4), blur(16), blur(48)])
+R = CW / 768
+g = np.dstack([blur(4 * R), blur(16 * R), blur(48 * R)])
 g = (g / np.maximum(g.reshape(-1, 3).max(0), 1) * 255).clip(0, 255).astype(np.uint8)
 Image.fromarray(g, 'RGB').save(f'../../public/fig/{name}-glow.png', optimize=True)
 
