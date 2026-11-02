@@ -1,0 +1,8 @@
+{
+  "crons": [{ "path": "/api/harvest", "schedule": "0 17 * * *" }],
+  "functions": {
+    "api/harvest.js": { "maxDuration": 300 },
+    "api/state.js": { "maxDuration": 60 },
+    "api/aura.js": { "maxDuration": 60 }
+  }
+}

@@ -21,6 +21,7 @@
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",
     "@fontsource/spectral": "^5.3.0",
+    "@vercel/blob": "^2.8.2",
     "three": "^0.170.0"
   },
   "devDependencies": {
