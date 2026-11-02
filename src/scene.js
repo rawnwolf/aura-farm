@@ -375,10 +375,29 @@ export function createScene(canvas) {
   window.addEventListener('pointermove', (e) => {
     state.pointerTarget.set((e.clientX / window.innerWidth) * 2 - 1, -((e.clientY / window.innerHeight) * 2 - 1));
   });
+  // Phone tilt: map the device axes to the screen's current orientation (portrait or landscape),
+  // and measure tilt from a slowly re-centring "neutral" so any holding angle works.
+  let tiltBase = null;
   window.addEventListener('deviceorientation', (e) => {
-    if (e.gamma == null) return;
-    state.pointerTarget.set(Math.max(-1, Math.min(1, e.gamma / 30)), Math.max(-1, Math.min(1, (45 - e.beta) / 30)));
+    if (e.gamma == null || e.beta == null) return;
+    const angle = (screen.orientation && typeof screen.orientation.angle === 'number')
+      ? screen.orientation.angle : (window.orientation || 0);
+    let x, y;
+    switch ((angle + 360) % 360) {
+      case 90: x = e.beta; y = -e.gamma; break;    // landscape, rotated left
+      case 270: x = -e.beta; y = e.gamma; break;   // landscape, rotated right
+      case 180: x = -e.gamma; y = -e.beta; break;  // upside down
+      default: x = e.gamma; y = e.beta;            // portrait
+    }
+    if (!tiltBase) tiltBase = { x, y };
+    tiltBase.x += (x - tiltBase.x) * 0.015;
+    tiltBase.y += (y - tiltBase.y) * 0.015;
+    const clamp = (v) => Math.max(-1, Math.min(1, v));
+    state.pointerTarget.set(clamp((x - tiltBase.x) / 18), clamp(-(y - tiltBase.y) / 18));
   });
+  const resetTilt = () => { tiltBase = null; };
+  window.addEventListener('orientationchange', resetTilt);
+  screen.orientation?.addEventListener?.('change', resetTilt);
   resize();
 
   const clock = new THREE.Clock();
