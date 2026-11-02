@@ -223,3 +223,23 @@ export function shareText(data) {
     ? `My aura has reached ${t.name} on $AURA, farming at ${data.multiplier.toFixed(2)}×. Hold. Farm. Ascend.`
     : `Farming toward ${t.name} on $AURA. Hold. Farm. Ascend.`;
 }
+
+/**
+ * Square or wide brand art cropped from the live scene (profile pictures, banners).
+ * centerY / spanH are in portal units (arch spring line = 0, floor = -0.36).
+ * offsetX shifts the figure sideways as a fraction of the output width.
+ */
+export async function makeArt(scene, { w, h, tierIndex = 4, multiplier = 3, centerY = 0.04, spanH = 0.42, offsetX = 0 }) {
+  const t = TIERS[tierIndex];
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const g = out.getContext('2d');
+  g.fillStyle = '#05070a'; g.fillRect(0, 0, w, h);
+  scene.snapshot(t.color, intensityFor({ multiplier }), ({ canvas, cx, top, bottom }) => {
+    const unit = (bottom - top) / 1.04;
+    const py = top + (0.42 - centerY) * unit;
+    const srcH = spanH * unit, srcW = srcH * (w / h);
+    g.drawImage(canvas, cx - srcW / 2 - offsetX * srcW, py - srcH / 2, srcW, srcH, 0, 0, w, h);
+  });
+  return out;
+}

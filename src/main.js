@@ -7,7 +7,7 @@ import '@fontsource/spectral/500.css';
 import './style.css';
 import { CONFIG, TIERS, multiplierFor, tierIndexFor } from './config.js';
 import { createScene } from './scene.js';
-import { makeCard, makeAnimatedCard, videoSupport, shareText } from './card.js';
+import { makeCard, makeAnimatedCard, makeArt, videoSupport, shareText } from './card.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -329,4 +329,4 @@ dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(
 dialog.addEventListener('close', () => video.pause());
 
 // Used to render the link-preview image
-window.__aura = { makeCard: (d) => makeCard(scene, d), makeAnimatedCard: (d, o) => makeAnimatedCard(scene, d, o) };
+window.__aura = { makeCard: (d) => makeCard(scene, d), makeAnimatedCard: (d, o) => makeAnimatedCard(scene, d, o), makeArt: (o) => makeArt(scene, o) };
