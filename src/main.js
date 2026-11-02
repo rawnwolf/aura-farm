@@ -36,7 +36,7 @@ $$('[data-buy]').forEach((a) => {
   a.href = CONFIG.buyUrl || CONFIG.launchpadUrl;
   a.target = '_blank';
   a.rel = 'noopener';
-  if (!CONFIG.buyUrl) a.innerHTML = '<span class="lp-long">Veilbound Launchpad</span><span class="lp-short">Launchpad</span>';
+  if (!CONFIG.buyUrl) a.textContent = 'Veilbound Launchpad';
 });
 
 // ---------- Contract address ----------
